@@ -32,17 +32,22 @@ class ProfileUpdateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     def get(self, request):
-        try:
-            user=request.user
-            profile = Profile.objects.get(user=request.user)
-            serializer = ProfileSerializer(profile)
-            return Response(serializer.data)
-        except Profile.DoesNotExist:
-            return Response({"error": "Profile not found"}, status=404)
+        # try:
+        #     user=request.user
+        #     profile = Profile.objects.get(user=user)
+        #     serializer = ProfileSerializer(profile)
+        #     return Response(serializer.data)
+        # except Profile.DoesNotExist:
+        #     return Response({"error": "Profile not found"}, status=404)
+        user=request.user
+        profile=Profile.objects.get(user=user)
+        serializer=ProfileSerializer(profile)
+        return Response(serializer.data)
+    
         
 class UpdateView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
+    # parser_classes = (MultiPartParser, FormParser)
     def put(self, request):
 
         try:

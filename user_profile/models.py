@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from user.models import User
 
 # from matrimony.user.models import User
 
@@ -14,7 +15,7 @@ class Profile(models.Model):
     weight = models.DecimalField(help_text="weight in kilograms(Kg)",max_digits=5, decimal_places=2)
     height = models.DecimalField(help_text="heigth in centimeters(Cm)",max_digits=5, decimal_places=2)
     gender = models.CharField(max_length=10, null=True, blank=True)
-    date_of_birth = models.DateField()
+    date_of_birth = models.DateField(null=True, blank=True)
     religion = models.CharField(max_length=50, null=True, blank=True)
     caste = models.CharField(max_length=50, null=True, blank=True)
     profession = models.CharField(max_length=50, null=True, blank=True)
@@ -54,8 +55,10 @@ class Profile(models.Model):
            Then, it saves the object to the database using the parent class's save method.'''
         
     def save(self, *args, **kwargs):
-        self.age = self.calculate_age()
+        self.date_of_birth = self.user.date_of_birth
+        self.age=self.calculate_age()
         super().save(*args, **kwargs)
+        
 
         
     

@@ -35,7 +35,7 @@ class SubscriptionTypeCreateView(APIView):
     def post(self, request):
         serializer = SubscriptionTypeSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=request.user)
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
     
@@ -46,6 +46,24 @@ class SubscriptionTypeCreateView(APIView):
             return Response({"error": "Subscription type not found"}, status=404)
         serializer= SubscriptionTypeSerializer(subscription_type, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=request.user)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        user=request.user
+        subscription_types = Subscribe.objects.all()
+        serializer = SubscriptionTypeSerializer(subscription_types, many=True)
+        return Response(serializer.data)
+        
+    
+    def delete(self, request, pk):
+        user=request.user
+        try:
+            subscription_type = Subscribe.objects.get(pk=pk)
+        except Subscribe.DoesNot:
+            return Response({"error": "Subscription type not found"}, status=404)
+        if user != request.user:
+            return Response({"error": "You are not authorized to delete this subscription type"}, status=403)
+        subscription_type.delete()
+        return Response({"message": "Subscription type deleted successfully"}, status=204)

@@ -8,6 +8,7 @@ class PreferenceSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['user']
 
+
     def validate(self, data):
         gender = data.get('gender')
         religion = data.get('religion')
@@ -16,6 +17,11 @@ class PreferenceSerializer(serializers.ModelSerializer):
         education = data.get('education')
         location = data.get('location')
         language = data.get('language')
+        min_age = data.get('min_age')
+        max_age = data.get('max_age')
+
+        if min_age is not None and max_age is not None and min_age > max_age:
+            raise serializers.ValidationError("Minimum age cannot be greater than maximum age.")
 
 
 

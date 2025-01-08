@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import *
 from manager_table.models import common_matching
+from django.utils import timezone
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -58,6 +59,10 @@ class ProfileSerializer(serializers.ModelSerializer):
         
         return data
     
+    def validate_date_of_birth(self, value):
+        if value > timezone.now().date():
+            raise serializers.ValidationError("Date of birth cannot be in the future.")
+        return value
     
     
     

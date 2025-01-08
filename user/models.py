@@ -2,7 +2,10 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.utils import timezone
-from django.core.exceptions import ValidationError
+from rest_framework import serializers
+# from django.core.exceptions import ValidationError
+# from rest_framework.response import Response
+# from rest_framework import status
 
 # Create your models here.
 
@@ -35,7 +38,11 @@ class User(AbstractUser):
             age = today.year - self.date_of_birth.year-((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
 
             if age < 18 or age > 65:
-                raise ValidationError("Age must be between 18 and 65.")
+                raise serializers.ValidationError("Age must be between 18 and 65.")
+            
+            
+            
+            
             
         if self.role=='admin':
             self.is_staff=True
@@ -49,24 +56,27 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} - {self.get_role_display()} "
     
-    def validate_password(self,password):
-        if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters long.")
-        if not self.contains_uppercase(password):
-            raise ValueError("Password must contain at least one uppercase letter.")
-        if not self.contains_lowercase(password):
-            raise ValueError("Password must contain at least one lowercase letter.")
-        if not self.contains_digit(password):
-            raise ValueError("Password must contain at least one digit.")
-        if not self.contains_special_character(password):
-            raise ValueError("Password must contain at least one special character.")
+    # def validate_password(self,password):
+    #     if len(password) < 8:
+    #         raise ValueError("Password must be at least 8 characters long.")
+    #     if not self.contains_uppercase(password):
+    #         raise ValueError("Password must contain at least one uppercase letter.")
+    #     if not self.contains_lowercase(password):
+    #         raise ValueError("Password must contain at least one lowercase letter.")
+    #     if not self.contains_digit(password):
+    #         raise ValueError("Password must contain at least one digit.")
+    #     if not self.contains_special_character(password):
+    #         raise ValueError("Password must contain at least one special character.")
+        
+        
     
-    def contains_uppercase(self, password):
-        return any(char.isupper() for char in password)
-    def contains_lowercase(self, password):
-        return any(char.islower() for char in password)
-    def contains_digit(self, password):
-        return any(char.isdigit() for char in password)
-    def contains_special_character(self, password):
-        special_characters = "!@#$%^&*()_+-=[]{}|;:,.<>?"
-        return any(char in special_characters for char in password)
+    # def contains_uppercase(self, password):
+    #     return any(char.isupper() for char in password)
+    # def contains_lowercase(self, password):
+    #     return any(char.islower() for char in password)
+    # def contains_digit(self, password):
+    #     return any(char.isdigit() for char in password)
+    # def contains_special_character(self, password):
+    #     special_characters = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+    #     return any(char in special_characters for char in password)
+    

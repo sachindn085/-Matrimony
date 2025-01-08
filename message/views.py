@@ -7,10 +7,35 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from user.models import User
 from notification.models import Notification
+from matching_app.models import Matching
+from django.db.models import Q
 
 # Create your views here.
 class MessageCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    # def post(self,request):
+    #     sender= request.user
+    #     receiver=request.data.get('receiver')
+    #     try:
+    #         receiver_instance=User.objects.get(username=receiver)
+    #     except User.DoesNotExist:
+    #         return Response({"error": "Receiver not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     if receiver_instance==sender:
+    #         return Response({"error": "You cannot send message to yourself"}, status=status.HTTP_400_BAD_REQUEST)
+    #     data=request.data.copy()
+    #     data['receiver']=receiver_instance.pk
+        
+    #     serializer= MessageSerializer(data=data)
+    #     if serializer.is_valid():
+    #         serializer.save(sender=sender)
+    #         Notification.objects.create(
+    #             user=receiver_instance,
+    #             message=f"{sender.username} has sent you a message"
+    #         )
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
     def post(self,request):
         sender= request.user
         receiver=request.data.get('receiver')
@@ -20,6 +45,10 @@ class MessageCreateView(APIView):
             return Response({"error": "Receiver not found"}, status=status.HTTP_404_NOT_FOUND)
         if receiver_instance==sender:
             return Response({"error": "You cannot send message to yourself"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            matching_request = Matching.objects.get(user1=sender, user2=receiver_instance,status='accepted')
+        except Matching.DoesNotExist:
+            return Response({"error": "You can only send messages to accepted matches"}, status=status.HTTP_400_BAD_REQUEST)
         data=request.data.copy()
         data['receiver']=receiver_instance.pk
         
@@ -32,6 +61,8 @@ class MessageCreateView(APIView):
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
 
     
     
@@ -61,3 +92,35 @@ class MessageDeleteView(APIView):
             return Response({"error": "You are not authorized to delete this message"}, status=status.HTTP_403_FORBIDDEN)
         
         
+class MessageListView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        sender=request.user
+        receiver=request.data.get('receiver')
+        if not receiver:
+            return Response({"error": "Receiver is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            receiver_instance=User.objects.get(username=receiver)
+        except User.DoesNotExist:
+            return Response({"error": "Receiver not found"}, status=status.HTTP_404_NOT_FOUND)
+        data=request.data.copy()
+        data['receiver']=receiver_instance.pk
+        # if sender==receiver_instance:
+        #     return Response({"error": "You cannot send message to yourself"}, status=status.HTTP_400_BAD_REQUEST)
+        messages= Message.objects.filter((Q(sender=sender) & Q(receiver=receiver_instance)|Q(sender=receiver_instance) & Q(receiver=sender))).order_by('created_at')
+        for message in messages:
+            if message.receiver == sender:
+                message.status = 'read'
+                message.save()
+        serializers= MessageSerializer(messages, many=True)
+        return Response(serializers.data, status=status.HTTP_200_OK)      
+
+
+class RetriveUnreadMessagesView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user=request.user
+        unread_messages = Message.objects.filter(receiver=user, status='unread')
+        serializer= MessageSerializer(unread_messages, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+      

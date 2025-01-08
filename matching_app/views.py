@@ -31,6 +31,10 @@ class MatchingCreateView(APIView):
         existing_match = Matching.objects.filter((Q(user1=user1) & Q(user2=user2_instance)) |(Q(user1=user2_instance) & Q(user2=user1))).first()
         if existing_match:
             return Response({"message": "Match already exists"}, status=status.HTTP_400_BAD_REQUEST)
+        if user1==user2_instance:
+            return Response({"message": "Cannot match with yourself"}, status=status.HTTP_400_BAD_REQUEST)
+        if user1.gender == user2_instance.gender:
+            return Response({"message": "Cannot match with same gender"}, status=status.HTTP_400_BAD_REQUEST)
         if serializer.is_valid():
             serializer.save(user1=user1,user2=user2_instance)
             Notification.objects.create(
@@ -51,6 +55,8 @@ class MatchingCreateView(APIView):
 class MatchingUpdateView(APIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request, pk):
+        if not self.user_has_active_subscription(request.user):
+            return Response({"error": "You need an active subscription to accept a matching request."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             matching=Matching.objects.get(pk=pk,user2=request.user)
         except Matching.DoesNotExist:
@@ -66,14 +72,22 @@ class MatchingUpdateView(APIView):
         matching.save()
         return Response(MatchingSerializer(matching).data, status=status.HTTP_200_OK)
     
+    def user_has_active_subscription(self, user):
+        """Helper method to check if a user has an active subscription"""
+        active_subscription = Subscription.objects.filter(user=user, status='active').first()
+        return active_subscription is not None
+    
 
 class MatchingRejectView(APIView):
     permission_classes = [IsAuthenticated]
     def patch(self, request, pk):
+        if not self.user_has_active_subscription(request.user):
+            return Response({"error": "You need an active subscription to reject a matching request."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             matching=Matching.objects.get(pk=pk,user2=request.user)
         except Matching.DoesNotExist:
             return Response({"error": "Matching not found"}, status=404)
+        
         new_status = request.data.get('status')
         if new_status not in ['rejected']:
             return Response({"error": "Invalid status"}, status=400)
@@ -85,13 +99,25 @@ class MatchingRejectView(APIView):
         matching.save()
         return Response(MatchingSerializer(matching).data, status=status.HTTP_200_OK)
     
+    def user_has_active_subscription(self, user):
+        """Helper method to check if a user has an active subscription"""
+        active_subscription = Subscription.objects.filter(user=user, status='active').first()
+        return active_subscription is not None
+    
 class MatchingListView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         user = request.user
+        if not self.user_has_active_subscription(user):
+            return Response({"error": "You need an active subscription to access matches."}, status=status.HTTP_400_BAD_REQUEST)
         matching = Matching.objects.filter(Q(user1=user)|Q(user2=user))
         serializer = MatchingSerializer(matching, many=True)
         return Response(serializer.data)
+    
+    def user_has_active_subscription(self, user):
+        """Helper method to check if a user has an active subscription"""
+        active_subscription = Subscription.objects.filter(user=user, status='active').first()
+        return active_subscription is not None
     
     # def delete(self, request, pk):
     #     try:
@@ -119,7 +145,7 @@ class MatchingRetriveView(APIView):
                 # profile__height__lte = user_preference.max_height,
                 # profile__weight__gte = user_preference.min_weight,
                 # profile__weight__lte = user_preference.max_weight,
-                profile__religion = user_preference.religion,
+                # profile__religion = user_preference.religion,
                 # profile__caste = user_preference.caste
                 )
             match_data =[]
@@ -129,6 +155,7 @@ class MatchingRetriveView(APIView):
                     'username': match.username,
                     'email': match.email,
                     'profile': {
+                        'name': match.profile.name,
                         'gender': match.profile.gender,
                         'age': match.profile.age,
                         'height': match.profile.height,
